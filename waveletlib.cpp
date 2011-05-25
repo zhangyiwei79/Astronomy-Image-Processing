@@ -3,6 +3,7 @@
 #include "waveletlib.h"
 #include "math.h"
 
+
 void ColConvolution2D(double *pSrc, double *pFilter, int filterLength, int row, int col, double *pRes, bool bAddZero)
 {
 	double temp, a, b;
@@ -869,6 +870,7 @@ void WaveletDenoise(WaveletNode *pNodeList, double *pBuffer, int nLayer, double 
 	{
 		pBuffer[i] = abs(pNode->sibling->pDiag[i]);
 	}
+	
 	globalSigma = CalculateNoiseSigma(pBuffer, nCount);
 
 	for (int i=0; i< nLayer; i++)

@@ -9,11 +9,10 @@
 
 using namespace std;
 
-
 typedef struct _WaveletNode WaveletNode;
 struct _WaveletNode
 {
-    struct _WaveletNode *sibling;
+  struct _WaveletNode *sibling;
     
 	double *pVer;
 	double *pHor;
