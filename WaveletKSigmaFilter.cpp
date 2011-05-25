@@ -34,9 +34,9 @@ REGISTER_PLUGIN_BASIC(OpticksAstronomy, WaveletKSigmaFilter);
 
 namespace
 {
-    #define LAYERS 4
-    #define BLOCK_ROWS 128
-    #define BLOCK_COLS 128
+    #define LAYERS 5
+    #define BLOCK_ROWS 256
+    #define BLOCK_COLS 256
 	WaveletNode NodeList[LAYERS+1];
 
 	int filterLen = 4;
@@ -64,8 +64,11 @@ namespace
 	  }
 
 	  ShiftInvariantWaveletTransform(pBuffer, rowBlocks, colBlocks, pLoFilter, pHiFilter, filterLen, LAYERS, NodeList);
+
 	  WaveletDenoise(NodeList, pBuffer, LAYERS, pScaleKSigma);
+
 	  ShiftInvariantInverseWaveletTransform(rowBlocks, colBlocks, pRecLoFilter, pRecHiFilter, filterLen, LAYERS, NodeList);
+
 
 	  ReleaseList(NodeList, LAYERS);
    }
@@ -85,8 +88,8 @@ namespace
 WaveletKSigmaFilter::WaveletKSigmaFilter()
 {
    setDescriptorId("{28702D56-4634-4CCC-8840-C10F805C9870}");
-   setName("Wavelet K-Sigma Filter");
-   setDescription("Noise removal for astronomical image");
+   setName("Wavelet K-Sigma Filter ");
+   setDescription("Remove noise for astronomical image");
    setCreator("Yiwei Zhang");
    setVersion("Sample");
    setCopyright("Copyright (C) 2008, Ball Aerospace & Technologies Corp.");
