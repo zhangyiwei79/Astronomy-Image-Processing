@@ -24,6 +24,7 @@
 #include "SpatialDataWindow.h"
 #include "switchOnEncoding.h"
 #include "HistogramShaping.h"
+#include "HistogramShapingDlg.h"
 #include <limits>
 #include <algorithm>
 
@@ -31,8 +32,6 @@ REGISTER_PLUGIN_BASIC(OpticksAstronomy, HistogramShaping);
 
 namespace
 {
-   #define MAX_GRAY_VALUE 65535
-
    template<typename T>
    void calculateHistogram(T* pData, unsigned int *pHisto, unsigned int &pvMin, unsigned int &pvMax)
    {
@@ -53,17 +52,39 @@ namespace
 
        return val;
    }
+
+   double GetMaxGrayScale(unsigned int *pHisto, unsigned int pvMax)
+   {
+	   unsigned int pv = 0;
+	   unsigned int peakValue = 0;
+	   double maxGrayValue = 0;
+
+	   for (pv = 0; pv < pvMax; pv++)
+       {
+		   if (pHisto[pv] > maxGrayValue)
+		   {
+			   peakValue = pv;
+			   maxGrayValue = pHisto[pv];
+		   }
+       }
+	   peakValue = peakValue/pvMax;
+
+	   return peakValue;
+   }
+
    
    void HistogramReshape(unsigned int *pHisto, double *pTarget, unsigned int *pLUT, unsigned int pvMax, double meanVal, double sigma)
    {
        unsigned int histoSum = 0;
        unsigned int pv = 0;
        double ratio = 0;
+	   
        
        for (pv = 0; pv < pvMax; pv++)
        {
            histoSum = histoSum + pHisto[pv];
        	   pHisto[pv] = histoSum;
+
        }
        
        for (pv = 0; pv < pvMax; pv++)
@@ -87,13 +108,14 @@ namespace
        unsigned int pvNew = 0;
        for (pv = 0; pv < pvMax; pv++)
        {
-       	   while (pTarget[pvNew] < pHisto[pv])
+       	   while ((pvNew < pvMax) && (pTarget[pvNew] < pHisto[pv]))
        	   {
        	       pvNew++;
        	   }
        	   
        	   pLUT[pv] = pvNew;
        }
+	   
    }
    
          
@@ -195,41 +217,69 @@ bool HistogramShaping::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArg
    
    unsigned int pvMin = std::numeric_limits<unsigned int>::max();
    unsigned int pvMax = 0;
-   double sigma = 1.0/6.0;
-   double meanVal = 0.25;
+   unsigned maxGrayValue = 65535;
+   double sigma = 3.0;
+   double meanVal = 0.5;
+
+   if (ResultType == INT1UBYTE)
+   {
+	   maxGrayValue = 255;
+   }
+   else if (ResultType == INT1SBYTE)
+   {
+	   maxGrayValue = 127;
+   }
+   else if (ResultType == INT2UBYTES)   
+   {
+       maxGrayValue = 65535;
+   }
+   else if (ResultType == INT2SBYTES)
+   {
+	   maxGrayValue = 32767;
+   }
+   else
+   {
+	   return false;
+   }
+
+   unsigned int *HistgramArray = (unsigned int *)calloc(sizeof(unsigned int), (maxGrayValue+1));
+   for (unsigned int row = 0; row < pDesc->getRowCount(); ++row)
+   {
+       if (isAborted())
+       {
+          std::string msg = getName() + " has been aborted.";
+          pStep->finalize(Message::Abort, msg);
+          if (pProgress != NULL)
+          {
+             pProgress->updateProgress(msg, 0, ABORT);
+          }
+          free(HistgramArray);
+          return false;
+       }
+       for (unsigned int col = 0; col < pDesc->getColumnCount(); ++col)
+       {
+           switchOnEncoding(pDesc->getDataType(), calculateHistogram, pSrcAcc->getColumn(), HistgramArray, pvMin, pvMax);
+           pSrcAcc->nextColumn();
+       }
+       pSrcAcc->nextRow();
+   }
+   pvMax = maxGrayValue;
+
+   
+   meanVal = GetMaxGrayScale(HistgramArray, pvMax);
      
 
    Service<DesktopServices> pDesktop;
+   HistogramShapingDlg dlg(pDesktop->getMainWidget(), meanVal);
+   int stat = dlg.exec();
+   if (stat == QDialog::Accepted)
    {
-   	  unsigned int *HistgramArray = (unsigned int *)calloc(sizeof(unsigned int), MAX_GRAY_VALUE);
-   	  
-      for (unsigned int row = 0; row < pDesc->getRowCount(); ++row)
-      {
-         if (pProgress != NULL)
-         {
-            pProgress->updateProgress("Histogram shaping ", row * 100 / pDesc->getRowCount(), NORMAL);
-         }
-         if (isAborted())
-         {
-            std::string msg = getName() + " has been aborted.";
-            pStep->finalize(Message::Abort, msg);
-            if (pProgress != NULL)
-            {
-               pProgress->updateProgress(msg, 0, ABORT);
-            }
-            free(HistgramArray);
-            return false;
-         }
-         for (unsigned int col = 0; col < pDesc->getColumnCount(); ++col)
-         {
-             switchOnEncoding(pDesc->getDataType(), calculateHistogram, pSrcAcc->getColumn(), HistgramArray, pvMin, pvMax);
-             pSrcAcc->nextColumn();
-         }
-         pSrcAcc->nextRow();
-      }
+   	 
+	  sigma = dlg.getSigmaValue();
+	  meanVal = dlg.getMeanValue();  
       
-      double *TargetHistogram = (double *)calloc(sizeof(double), pvMax+1);
-      unsigned int *PixelMap = ( unsigned int *)calloc(sizeof(unsigned int), pvMax+1);
+      double *TargetHistogram = (double *)calloc(sizeof(double), (maxGrayValue+1));
+      unsigned int *PixelMap = ( unsigned int *)calloc(sizeof(unsigned int), (maxGrayValue+1));
       
       HistogramReshape(HistgramArray, TargetHistogram, PixelMap, pvMax, meanVal, sigma);
       
@@ -304,6 +354,10 @@ bool HistogramShaping::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArg
       pOutArgList->setPlugInArgValue("Histogram shaping result", pResultCube.release());
 
       pStep->finalize();
+   }
+   else
+   {
+	   free(HistgramArray);
    }
    return true;
 }
