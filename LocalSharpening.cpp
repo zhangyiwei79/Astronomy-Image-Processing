@@ -32,7 +32,78 @@ REGISTER_PLUGIN_BASIC(OpticksAstronomy, LocalSharpening);
 namespace
 {
 
-   #define MAX_WINDOW_SIZE 7  
+   #define MAX_WINDOW_SIZE 7
+   
+   template<typename T>
+   void localExtremeSharpening(T* pData, DataAccessor pSrcAcc, int row, int col, int rowSize, int colSize, EncodingType type, int windowSize)
+   {
+	  int i, j, m, n;
+	  double minVal = std::numeric_limits<double>::max();
+      double maxVal = -minVal;
+    
+	  double pixelVal = 0.0;
+	  double diffVal = 0.0;
+
+
+	  double windowVal[MAX_WINDOW_SIZE*2+1][MAX_WINDOW_SIZE*2+1];
+
+	  if ((col-windowSize < 0) || (col+windowSize > colSize - 1))
+	  {
+		  pSrcAcc->toPixel(row, col);
+          VERIFYNRV(pSrcAcc.isValid());
+		  pixelVal = Service<ModelServices>()->getDataValue(type, pSrcAcc->getColumn(), COMPLEX_MAGNITUDE, 0);
+          *pData = static_cast<T>(pixelVal);
+		  return;
+	  }
+
+	  if ((row-windowSize < 0) || (row+windowSize > rowSize - 1))
+	  {
+		  pSrcAcc->toPixel(row, col);
+          VERIFYNRV(pSrcAcc.isValid());
+		  pixelVal = Service<ModelServices>()->getDataValue(type, pSrcAcc->getColumn(), COMPLEX_MAGNITUDE, 0);
+          *pData = static_cast<T>(pixelVal);
+		  return;
+	  }
+
+	  //Get the pixels in the window
+	  m = 0;
+	  for (i=row - windowSize; i<= row + windowSize; i++)
+	  {
+		  n = 0;
+		  for (j=col - windowSize; j<= col + windowSize; j++)
+		  {
+			 pSrcAcc->toPixel(i, j);
+             VERIFYNRV(pSrcAcc.isValid());
+			 windowVal[m][n] = Service<ModelServices>()->getDataValue(type, pSrcAcc->getColumn(), COMPLEX_MAGNITUDE, 0);
+			 
+			 if (minVal > windowVal[m][n])	
+			 {
+				 minVal = windowVal[m][n];	
+			 }
+			 	
+			 	
+			 if (maxVal < windowVal[m][n])	
+			 {	
+				 maxVal = windowVal[m][n];	
+			 }
+			 n++;
+		  }
+		  m++;
+	  }
+	  pixelVal = windowVal[windowSize][windowSize];
+
+	  if (pixelVal - minVal <= maxVal - pixelVal)
+	  {
+		  pixelVal = minVal;
+      }
+      else	
+	  {
+		  pixelVal = maxVal;	
+	  }
+
+	  *pData = static_cast<T>(pixelVal);
+   }
+   
    
 
    template<typename T>
@@ -104,7 +175,8 @@ namespace
 	  sigmaVal = sqrt(sigmaVal);
 
 	  pixelVal = pixelVal + diffVal*contrastVal/sigmaVal;
-	  
+
+	 
 	  if (type == INT1UBYTE)
 	  {
 		  if (pixelVal > 255)
@@ -249,10 +321,15 @@ bool LocalSharpening::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgL
    DataAccessor pDestAcc = pResultCube->getDataAccessor(pResultRequest.release());
 
    Service<DesktopServices> pDesktop;
-   
-   double contrastVal = 5;
-   int nFilterType = 0;
-   int windowSize = 7;
+   LocalSharpeningDlg dlg(pDesktop->getMainWidget());
+   int stat = dlg.exec();
+   if (stat != QDialog::Accepted)
+   {
+	   return true;
+   }
+   double contrastVal = dlg.getContrastValue();
+   int nFilterType = dlg.getCurrentFilterType();
+   int windowSize = dlg.getCurrentWindowSize();
    windowSize = (windowSize-1)/2;
 
    for (unsigned int row = 0; row < pDesc->getRowCount(); ++row)
