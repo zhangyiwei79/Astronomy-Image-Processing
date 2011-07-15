@@ -24,6 +24,7 @@
 #include "SpatialDataWindow.h"
 #include "switchOnEncoding.h"
 #include "Deconvolution.h"
+#include "DeconvolutionDlg.h"
 
 #include <limits>
 
@@ -31,9 +32,9 @@ REGISTER_PLUGIN_BASIC(OpticksAstronomy, Deconvolution);
 
 namespace
 {
-
+   #define CONVERGENCE_THRESHOLD 0.05
    #define MAX_WINDOW_SIZE 7
-   #define MAX_ITERATION_NUMBER 8
+   #define MAX_ITERATION_NUMBER 20
    #define PI_VALUE 3.1415926
    
    //2 dimension Gaussian function
@@ -362,16 +363,21 @@ bool Deconvolution::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgLis
    DataAccessor pDestAcc = pResultCube->getDataAccessor(pResultRequest.release());
 
    Service<DesktopServices> pDesktop;
-
+   DeconvolutionDlg dlg(pDesktop->getMainWidget());
+   int stat = dlg.exec();
+   if (stat != QDialog::Accepted)
+   {
+	   return true;
+   }
 
    double minGrayValue;
    double maxGrayValue;
    double deltaValue = 0.0;
 
-   int nFilterType = 0;
-   int windowSize = 7;
-   double sigmaVal = 2.0; 
-   double gamaVal = 0.8;
+   int nFilterType = dlg.getCurrentFilterType();
+   int windowSize = dlg.getCurrentWindowSize();
+   double sigmaVal = dlg.getSigmaValue();
+   double gamaVal = dlg.getGamaValue();
    windowSize = (windowSize-1)/2;
    
    if (NULL != pOriginalImage)
@@ -418,6 +424,12 @@ bool Deconvolution::execute(PlugInArgList* pInArgList, PlugInArgList* pOutArgLis
       pTempData = OrigData;
       OrigData = NewData;
       NewData = pTempData;
+
+	  double errorRate = deltaValue/(maxGrayValue-minGrayValue);
+	  if (errorRate < CONVERGENCE_THRESHOLD)
+	  {
+		  break;
+	  }
    }
    
    free(NewData);
