@@ -213,7 +213,6 @@ int BrightnessMeasurementDlg::CalculateInnerRadius(int x, int y, int rows, int c
 	double currMean = 0;
 	int nPixels;
 	int i;
-	char strPos[100] = "";
 	  
     for (i=1; i<MAX_INNER_RADIUS; i++)
     {
@@ -230,10 +229,6 @@ int BrightnessMeasurementDlg::CalculateInnerRadius(int x, int y, int rows, int c
         prevMean = currMean;
         
     }
-
-	sprintf(strPos, "Star brightness: %.2f, %.2f\0", prevMean, currMean);
-
-	pStarBrightness->setText(strPos);
     
     return i+1;
 }
@@ -244,7 +239,6 @@ int BrightnessMeasurementDlg::CalculateOutterRadius(int x, int y, int inRadius, 
 	double currMean = 0;
 	int nPixels;
 	int i;
-	char strPos[100] = "";
 
     for (i=inRadius; i<MAX_OUTTER_RADIUS; i+=3)
     {
@@ -261,11 +255,7 @@ int BrightnessMeasurementDlg::CalculateOutterRadius(int x, int y, int inRadius, 
         prevMean = currMean;
         
     }
-
-	sprintf(strPos, "Sky brightness: %.2f, %.2f\0", prevMean, currMean);
-
-	pSkyBrightness->setText(strPos);
-    
+ 
     return i;
 }    	
 
