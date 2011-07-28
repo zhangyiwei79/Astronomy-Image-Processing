@@ -167,7 +167,7 @@ bool BrightnessMeasurement::execute(PlugInArgList* pInArgList, PlugInArgList* pO
    GetGrayScale(&minGrayValue, &maxGrayValue, pDesc->getDataType());
    
    Service<DesktopServices> pDesktop;
-   BrightnessMeasurementDlg dlg(pDesktop->getMainWidget(), pOriginalImage, pDesc->getColumnCount(), pDesc->getRowCount(),  minGrayValue, maxGrayValue);
+   BrightnessMeasurementDlg dlg(pDesktop->getMainWidget(), pOriginalImage, pDesc->getColumnCount(), pDesc->getRowCount(),  minGrayValue, maxGrayValue, pDesc->getDataType());
    int stat = dlg.exec();
    if (stat != QDialog::Accepted)
    {

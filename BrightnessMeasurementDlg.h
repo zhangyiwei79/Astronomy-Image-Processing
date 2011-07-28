@@ -11,6 +11,7 @@
 #define BRIGHTNESS_MEASUREMENT_DLG_H
 
 #include <QtGui/QDialog>
+#include "TypesFile.h"
 
 
 class QDoubleSpinBox;
@@ -18,25 +19,32 @@ class QLabel;
 class QPushButton;
 class QScrollArea;
 class QScrollBar;
+class QComboBox;
 
 class BrightnessMeasurementDlg : public QDialog
 {
    Q_OBJECT
 
 public:
-   BrightnessMeasurementDlg(QWidget* pParent, double *pBuffer, int imgWidth, int imgHeight, double t1, double t2); 
+   BrightnessMeasurementDlg(QWidget* pParent, double *pBuffer, int imgWidth, int imgHeight, double t1, double t2, EncodingType type); 
    ~BrightnessMeasurementDlg();
 
 private slots:
    void setInnerRadius(double radiusValue);
    void setOutterRadius(double radiusValue);
    void ComputeBrightness(void);
+   
+   void setMeasurementMode(int nIndex);
+   void setStarIndex(int nIndex);
 
 public:
    
    QLabel            *pStarPosition;
    QLabel            *pStarBrightness;
    QLabel            *pSkyBrightness;
+   
+   QComboBox         *pMode;
+   QComboBox         *pStarIndex;
    
    QDoubleSpinBox    *pInRadius;
    QDoubleSpinBox    *pOutRadius;
@@ -51,12 +59,25 @@ public:
    int CalculateInnerRadius(int x, int y, int rows, int cols, double maxGrayVal, double *pBuffer);
    int CalculateOutterRadius(int x, int y, int inRadius, int rows, int cols, double maxGrayVal, double *pBuffer);
 
+   void ModifyCenter(int *x, int *y, int rows, int cols, double *pBuffer);
+   void SortData(double *pData, int len);
+   double CalculateSkyBrightness(int x, int y, int inRadius, int outRadius, int rows, int cols, double *pBuffer);
+
 private:
 	double mInnerRadius;
 	double mOutterRadius;
 	
+	double mInnerRadius_2;
+	double mOutterRadius_2;
+	
 	int mPosX;
 	int mPosY;
+	
+	int mPosX_2;
+	int mPosY_2;
+	
+	int mMode;
+	int mStarIndex;
 	
 	double mStarBrightness;
 	double mSkyBrightness;
