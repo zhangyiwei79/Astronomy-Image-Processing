@@ -22,6 +22,7 @@
 #include "RasterUtilities.h"
 #include "SpatialDataView.h"
 #include "SpatialDataWindow.h"
+#include "Statistics.h"
 #include "switchOnEncoding.h"
 #include "ImageRegistration.h"
 #include "StringUtilities.h"
@@ -34,11 +35,11 @@ namespace
 {
 
    #define MAX_WINDOW_SIZE 10
-   #define MAX_DIFFERENCE_THRESHOLD 90
+   #define MAX_DIFFERENCE_THRESHOLD 0.35
    #define MINIMUM_RADIUS_LIMIT  100
    #define MAX_STAR_NUMBERS  20
-
-   #define MAX_MATCHING_ERROR  1000
+   
+   #define MAX_MATCHING_ERROR  300
    
    int nCountMas;
    int nStarPositionsMas[MAX_STAR_NUMBERS][2] = {0};
@@ -51,40 +52,257 @@ namespace
    double nStarGrayValueRef[MAX_STAR_NUMBERS] = {0};
    
    int nMatchingStarList[MAX_STAR_NUMBERS][3] = {0};
+   double shiftX, shiftY, dScale;
+   double matrixT[2][2];
+   
+   double gMinGrayValue,gMaxGrayValue;
 
    
-   void DrawStars(unsigned char *pBuffer, int rowSize, int colSize)
+   int round(double number)
    {
-   	   int i,j,index;
-	   int nCount = std::min(nCountMas, nCountRef);
+       double retVal = number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
+	   int intVal = (int)retVal;
 
-       for (int k=0; k<nCount; k++)
-       {
-           for (int m=-1; m<=1; m++)
-           {
-               for (int n=-1; n<=1; n++)
-               {
-				   index = nMatchingStarList[k][0];
-                   i = nStarPositionsMas[index][0] + m;
-                   j = nStarPositionsMas[index][1] + n;
-               
-                   if ((i >=0) && (i < rowSize) && (j >= 0) && (j < colSize))
-                   {
-                       pBuffer[i*colSize+j] = 255;
-                   }
-               }
-           }
-       }
+	   return intVal;
+   }
+
+   void DrawStars(double *pBuffer, DataAccessor pSrcAccRef, EncodingType type, double T[][2], int rows, int cols)
+   {
+       int i, j;
+	   double pixelVal;
+	   double Y[2], Z[2];
+	   int rowIndex, colIndex;
+
+	   for (i=0; i<rows; i++)
+	   {
+		   for (j=0; j<cols; j++)
+		   {
+   	           pSrcAccRef->toPixel(i, j);
+	           pixelVal = Service<ModelServices>()->getDataValue(type, pSrcAccRef->getColumn(), COMPLEX_MAGNITUDE, 0);
+
+               Y[0] = j-cols/2; Y[1] = -i+rows/2;
+			   Z[0] = Y[0]*T[0][0] + Y[1]*T[1][0] + shiftX;
+			   Z[1] = Y[0]*T[0][1] + Y[1]*T[1][1] + shiftY;
+
+               //Z = Y * T + [shiftX, shiftY];
+        
+			   rowIndex = round(-Z[1] +rows/2);
+               colIndex = round(Z[0] + cols/2);
+        
+               if ((rowIndex < 0) || (rowIndex >= rows))
+                   continue;
+        
+               if ((colIndex < 0) || (colIndex >= cols))
+                   continue;
+        
+               pBuffer[rowIndex*cols+ colIndex] += pixelVal;
+			   //pBuffer[rowIndex*cols+ colIndex] = pBuffer[rowIndex*cols+ colIndex]/2;
+
+			   //pBuffer[rowIndex*cols+ colIndex] = pixelVal;
+
+			  
+			   if (pBuffer[rowIndex*cols+ colIndex] > gMaxGrayValue)
+				   pBuffer[rowIndex*cols+ colIndex] = gMaxGrayValue;
+
+			   if (pBuffer[rowIndex*cols+ colIndex] < gMinGrayValue)
+				   pBuffer[rowIndex*cols+ colIndex] = gMinGrayValue;
+		   }
+	   }
    }
    
+   void GetGrayScale(EncodingType type)
+   {
+   	double minGrayVal = 0.0;
+   	double maxGrayVal = 255.0;
+   	
+   	if (type == INT1UBYTE)
+	  {
+	  	maxGrayVal = 255;
+	  	minGrayVal = 0;
+	  }
+		
+		if (type == INT1SBYTE)
+	  {
+	  	maxGrayVal = 127;
+	  	minGrayVal = -128;
+	  }
+	  
+	  if (type == INT2UBYTES)
+	  {
+	  	maxGrayVal = 65535;
+	  	minGrayVal = 0;
+	  }
+	  
+	  if (type == INT2SBYTES)
+	  {
+	  	maxGrayVal = 32767;
+	  	minGrayVal = -32768;
+	  }
+	  
+	  gMinGrayValue = minGrayVal;
+	  gMaxGrayValue = maxGrayVal;
+	 }
+   
    template<typename T>
-   void updatePixel(T* pData, unsigned char *pBuffer, int row, int col, int rowSize, int colSize)
+
+   void updatePixel(T* pData, double *pBuffer, int row, int col, int rowSize, int colSize)
    {
        
-       unsigned char pixelVal = pBuffer[row*colSize+col];
+       double pixelVal = pBuffer[row*colSize+col];
+	   pixelVal = pixelVal;
 
 	    *pData = static_cast<T>(pixelVal);
 
+   }
+    
+   
+   double svd2D(double A[][2], double T[][2])
+   {
+       double B[2][2] = {0.0};
+       double C[2][2] = {0.0};
+       
+       B[0][0] = A[0][0]*A[0][0]+A[1][0]*A[1][0]; 
+       B[0][1] = A[0][0]*A[0][1]+A[1][0]*A[1][1]; 
+       B[1][1] = A[0][1]*A[0][1]+A[1][1]*A[1][1];
+        
+       C[0][0] = A[0][0]*A[0][0]+A[0][1]*A[0][1]; 
+       C[0][1] = A[0][0]*A[1][0]+A[0][1]*A[1][1]; 
+       	
+       double t = B[0][0]+B[1][1]; 
+       double d = B[0][0]*B[1][1]-B[0][1]*B[0][1]; 
+       double r1 = (t+sqrt(t*t-4*d))/2; 
+       double r2 = d/r1; 
+       double h = sqrt(B[0][1]*B[0][1]+(r1-B[0][0])*(r1-B[0][0])); 
+       
+       double Q1[2][2] = {0.0};
+       double Q2[2][2] = {0.0};
+       
+       Q2[0][0] = B[0][1]/h; 
+       Q2[1][1] = Q2[0][0]; 
+       Q2[1][0] = (r1-B[0][0])/h; 
+       Q2[0][1] = -Q2[1][0]; 
+
+       double k = sqrt(C[0][1]*C[0][1]+(r1-C[0][0])*(r1-C[0][0])); 
+       Q1[0][0] = C[0][1]/k; 
+       Q1[1][1] = Q1[0][0]; 
+       Q1[1][0] = (r1-C[0][0])/k; 
+       Q1[0][1] = -Q1[1][0]; 
+       	
+       double temp = Q1[0][1];
+       Q1[0][1] = Q1[1][0];
+       Q1[1][0] = temp;
+       T[0][0] = Q2[0][0]*Q1[0][0] + Q2[0][1]*Q1[1][0];
+       T[1][1] = Q2[1][0]*Q1[0][1] + Q2[1][1]*Q1[1][1];
+       T[0][1] = Q2[0][0]*Q1[0][1] + Q2[0][1]*Q1[1][1];
+       T[1][0] = Q2[1][0]*Q1[0][0] + Q2[1][1]*Q1[1][0];
+
+       return (sqrt(r1)+ sqrt(r2));
+   }
+   
+   void procrustes(double X[][2], double Y[][2], int len)
+   {
+       int n = len;
+       double muX1 = 0, muX2 = 0;
+       double muY1 = 0, muY2 = 0;
+       double ssqX1 = 0, ssqX2 = 0;
+       double ssqY1 = 0, ssqY2 = 0;
+       
+       double matrixA[2][2] = {0.0};
+       
+       double X0[MAX_STAR_NUMBERS][2] = {0.0};
+       double Y0[MAX_STAR_NUMBERS][2] = {0.0};
+
+       //center at the origin
+       for (int i=0; i<n; i++)
+       { 
+           muX1 = muX1 + X[i][0];
+           muX2 = muX2 + X[i][1];
+           muY1 = muY1 + Y[i][0];
+           muY2 = muY2 + Y[i][1];
+       }
+       
+       muX1 = muX1/n;
+       muX2 = muX2/n;
+       muY1 = muY1/n;
+       muY2 = muY2/n;      
+
+       for (int i=0; i<n; i++)
+       {
+           X0[i][0] = X[i][0] - muX1;
+           X0[i][1] = X[i][1] - muX2;
+           Y0[i][0] = Y[i][0] - muY1;
+           Y0[i][1] = Y[i][1] - muY2;
+       }
+       
+       for (int i=0; i<n; i++)
+       {
+           ssqX1 += X0[i][0]*X0[i][0];
+           ssqX2 += X0[i][1]*X0[i][1];
+           ssqY1 += Y0[i][0]*Y0[i][0];
+           ssqY2 += Y0[i][1]*Y0[i][1];
+       }
+
+
+       // the "centered" Frobenius norm
+       double normX = sqrt((ssqX1 + ssqX2));
+       double normY = sqrt((ssqY1 + ssqY2));
+
+       //scale to equal (unit) norm
+       for (int i=0; i<n; i++)
+       {
+           X0[i][0] = X0[i][0] / normX;
+           X0[i][1] = X0[i][1] / normX;
+           Y0[i][0] = Y0[i][0] / normY;
+           Y0[i][1] = Y0[i][1] / normY;
+       }
+
+       //optimum rotation matrix of Y
+       for (int i=0; i<n; i++)
+       {
+           matrixA[0][0] += X0[i][0]*Y0[i][0];
+           matrixA[0][1] += X0[i][0]*Y0[i][1];
+           matrixA[1][0] += X0[i][1]*Y0[i][0];
+           matrixA[1][1] += X0[i][1]*Y0[i][1];
+       }
+       
+       double trsAA = svd2D(matrixA, matrixT);
+     
+       dScale = trsAA * normX / normY;
+
+       shiftX = muX1 - dScale*(muY1*matrixT[0][0] + muY2*matrixT[1][0]);
+       shiftY = muX2 - dScale*(muY1*matrixT[0][1] + muY2*matrixT[1][1]);
+
+   }
+   
+   void GetParameters(int rows, int cols)
+   {
+       double X[MAX_STAR_NUMBERS][2];
+       double Y[MAX_STAR_NUMBERS][2];
+	   int k;
+	   int nIndex = 0;
+
+	   int nCount  = std::min(nCountMas, nCountRef);
+
+       for (nIndex=0; nIndex<nCount; nIndex++)
+	   {
+		   if (nMatchingStarList[nIndex][2] > MAX_MATCHING_ERROR*nCount)
+		       break;
+	   }
+
+	   nCount = std::max(3, nIndex);
+
+       for (int i=0; i<nCount; i++)
+       {
+       	   k = nMatchingStarList[i][0];
+           X[i][0] = nStarPositionsMas[k][1]-cols/2;
+           X[i][1] = -nStarPositionsMas[k][0]+rows/2;
+           
+           k = nMatchingStarList[i][1];
+           Y[i][0] = nStarPositionsRef[k][1]-cols/2;
+           Y[i][1] = -nStarPositionsRef[k][0]+rows/2;
+       }
+       
+       procrustes(X, Y, nCount);
    }
    
    
@@ -312,7 +530,7 @@ namespace
 	  }
 	  
 	  
-	  if (abs(maxVal - minVal) > MAX_DIFFERENCE_THRESHOLD)
+	  if (abs(maxVal - minVal) > MAX_DIFFERENCE_THRESHOLD*(gMaxGrayValue - gMinGrayValue))
 	  {
 	      for (int k=0; k<nCount; k++)
 	      {
@@ -347,12 +565,18 @@ namespace
 
    }
 
-   void locateAllStarPosition(DataAccessor pSrcAccMas, DataAccessor pSrcAccRef, int row, int col, int rowSize, int colSize, EncodingType type, int windowSize)
+   void locateAllStarPosition(DataAccessor pSrcAccMas, DataAccessor pSrcAccRef, int row, int col, int rowSize, int colSize, EncodingType type, int windowSize, double *pBuffer)
    {
+	   pSrcAccMas->toPixel(row, col);
+      
+	   pBuffer[row*colSize+col] = Service<ModelServices>()->getDataValue(type, pSrcAccMas->getColumn(), COMPLEX_MAGNITUDE, 0);
+
 	   nCountMas = locateStarPosition(pSrcAccMas, row, col, rowSize, colSize, type, windowSize,  nCountMas, nStarPositionsMas, nStarGrayValueMas);
 
 	   nCountRef = locateStarPosition(pSrcAccRef, row, col, rowSize, colSize, type, windowSize,  nCountRef, nStarPositionsRef, nStarGrayValueRef);
    }
+
+   
    
 };
 
@@ -428,6 +652,7 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
    }
    RasterDataDescriptor* pDesc = static_cast<RasterDataDescriptor*>(pCube->getDataDescriptor());
    VERIFY(pDesc != NULL);
+   
    EncodingType ResultType = pDesc->getDataType();
    if (pDesc->getDataType() == INT4SCOMPLEX)
    {
@@ -458,6 +683,13 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
       }
       return false;
    }
+
+   std::vector<int> badValues = pDesc->getBadValues();
+   //badValues.push_back(0);
+   RasterDataDescriptor* pDescriptor = dynamic_cast<RasterDataDescriptor*>(pResultCube->getDataDescriptor());
+   Statistics* pStatistics = pResultCube->getStatistics(pDescriptor->getActiveBand(0));
+   pStatistics->setBadValues(badValues);
+
    FactoryResource<DataRequest> pResultRequest;
    pResultRequest->setWritable(true);
    DataAccessor pDestAcc = pResultCube->getDataAccessor(pResultRequest.release());
@@ -465,8 +697,17 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
    nCountMas = 0;
    nCountRef = 0;
    int windowSize = 6;
+   double *pBuffer = (double *)calloc(pDesc->getRowCount()*pDesc->getColumnCount(), sizeof(double));
+
+   GetGrayScale(pDesc->getDataType());
+
+   
    for (unsigned int row = 0; row < pDesc->getRowCount(); ++row)
    {
+	   if (pProgress != NULL)
+       {
+           pProgress->updateProgress("Image registration", row * 100 / pDesc->getRowCount(), NORMAL);
+       }
        if (isAborted())
        {
           std::string msg = getName() + " has been aborted.";
@@ -479,21 +720,19 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
        }
        for (unsigned int col = 0; col < pDesc->getColumnCount(); ++col)
        {
-	       locateAllStarPosition(pSrcAcc, pSrcAccRef, row, col, pDesc->getRowCount(), pDesc->getColumnCount(), pDesc->getDataType(), windowSize);
+	       locateAllStarPosition(pSrcAcc, pSrcAccRef, row, col, pDesc->getRowCount(), pDesc->getColumnCount(), pDesc->getDataType(), windowSize, pBuffer);
        }
    }
 
    ModifyCenter(pSrcAcc, pDesc->getDataType(), windowSize, nCountMas, nStarPositionsMas);
    ModifyCenter(pSrcAccRef, pDesc->getDataType(), windowSize, nCountRef, nStarPositionsRef);
 
-   std::string msg = "Image Registration is compete. "+ StringUtilities::toDisplayString(pDesc->getRowCount()) + ";" + 
-		                 StringUtilities::toDisplayString(pDesc->getColumnCount()) + ";" + StringUtilities::toDisplayString(nCountMas) + ";" + StringUtilities::toDisplayString(nCountRef);
-
    GetAllNeighborStars();
    GetMatchingStars();
    
-   unsigned char *pBuffer = (unsigned char *)calloc(pDesc->getRowCount()*pDesc->getColumnCount(), sizeof(unsigned char));
-   DrawStars(pBuffer, pDesc->getRowCount(), pDesc->getColumnCount());
+   GetParameters(pDesc->getRowCount(), pDesc->getColumnCount());
+  
+   DrawStars(pBuffer, pSrcAccRef, pDesc->getDataType(), matrixT, pDesc->getRowCount(), pDesc->getColumnCount());
 
    //Output the value 
       for (unsigned int m = 0; m < pDesc->getRowCount(); m++)
@@ -533,7 +772,6 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
 	  }
    free(pBuffer);
    
-   
 
 
    if (!isBatch())
@@ -559,6 +797,10 @@ bool ImageRegistration::execute(PlugInArgList* pInArgList, PlugInArgList* pOutAr
       pView->createLayer(RASTER, pResultCube.get());
    }
 
+   double theta = std::acos(matrixT[0][0])*180.0/3.1415926;
+
+   std::string msg = "Image Registration is complete.\n Translation x = " +  StringUtilities::toDisplayString(round(shiftX)) + ", y = " + 
+	                 StringUtilities::toDisplayString(round(shiftY)) + ", rotation = " + StringUtilities::toDisplayString(round(theta)) + " degree";
    if (pProgress != NULL)
    {
 	   
