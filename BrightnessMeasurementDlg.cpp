@@ -247,7 +247,21 @@ void BrightnessMeasurementDlg::setStarIndex(int nIndex)
 
 void BrightnessMeasurementDlg::setInnerRadius(double dVal)
 {
-	mInnerRadius = dVal;
+	if (mMode == 0)
+	{
+		mInnerRadius = dVal;
+	}
+	else
+	{
+	    if (mStarIndex == 0)
+	    {
+	        mInnerRadius = dVal;
+	    }
+	    else
+	    {
+		    mInnerRadius_2 = dVal;
+	    }
+	}
 
 	imageLabel->update();
 	imageLabel->repaint();
@@ -256,7 +270,21 @@ void BrightnessMeasurementDlg::setInnerRadius(double dVal)
 
 void BrightnessMeasurementDlg::setOutterRadius(double dVal)
 {
-	mOutterRadius = dVal;
+	if (mMode == 0)
+	{
+		mOutterRadius = dVal;
+	}
+	else
+	{
+	    if (mStarIndex == 0)
+	    {
+	        mOutterRadius = dVal;
+	    }
+	    else
+	    {
+		    mOutterRadius_2 = dVal;
+	    }
+	}
 	
 	imageLabel->update();
 	imageLabel->repaint();
