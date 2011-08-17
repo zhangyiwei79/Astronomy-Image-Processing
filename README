@@ -1,0 +1,49 @@
+Opticks Astronomical Image Processing Plugin
+
+Source File List:
+
+Wavelet K-Sigma Filter for noise removal
+    waveletlib.cpp
+    waveletlib.h
+    WaveletKSigmaFilter.cpp
+    WaveletKSigmaFilter.h
+    moc_WaveletSigmaDlg.cpp
+    WaveletSigmaDlg.cpp
+    WaveletSigmaDlg.h
+    
+Histogram Reshaping for Image Enhancement
+    moc_HistogramShapingDlg.cpp
+    HistogramShapingDlg.h
+    HistogramShapingDlg.cpp
+    HistogramShaping.h
+    HistogramShaping.cpp
+    
+Deconvolution for Image Enhancement
+    moc_LocalSharpeningDlg.cpp
+    LocalSharpening.h
+    LocalSharpening.cpp
+    LocalSharpeningDlg.h
+    LocalSharpeningDlg.cpp
+    
+    
+Deconvolution for Image Enhancement
+    moc_DeconvolutionDlg.cpp
+    DeconvolutionDlg.h
+    DeconvolutionDlg.cpp
+    Deconvolution.h
+    Deconvolution.cpp
+
+Brightness Measurement
+    moc_BrightnessMeasurementDlg.cpp
+    BrightnessMeasurement.h
+    BrightnessMeasurement.cpp
+    BrightnessMeasurementDlg.h
+    BrightnessMeasurementDlg.cpp
+    
+Image Registration
+    ImageRegistration.cpp
+    ImageRegistration.h
+
+
+
+Test Images can be obtained under directory "images"
