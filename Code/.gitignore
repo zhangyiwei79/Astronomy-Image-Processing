@@ -1,0 +1,8 @@
+Build
+ipch
+.parasoft.dat
+*.suo
+*.sdf
+*.opensdf
+*.user
+*.swp

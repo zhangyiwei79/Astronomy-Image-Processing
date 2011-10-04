@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AstronomyMgr", "AstronomyMgr.vcxproj", "{74D47455-23E0-4404-A328-5FB4D479DCF4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AstronomyUtilities", "AstronomyUtilities\AstronomyUtilities.vcxproj", "{92E62D3A-223A-4CC5-87A3-51280E0A3742}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{74D47455-23E0-4404-A328-5FB4D479DCF4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{74D47455-23E0-4404-A328-5FB4D479DCF4}.Debug|x64.ActiveCfg = Debug|x64
+		{74D47455-23E0-4404-A328-5FB4D479DCF4}.Release|Win32.ActiveCfg = Release|Win32
+		{74D47455-23E0-4404-A328-5FB4D479DCF4}.Release|x64.ActiveCfg = Release|x64
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Debug|Win32.ActiveCfg = Debug|Win32
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Debug|Win32.Build.0 = Debug|Win32
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Debug|x64.ActiveCfg = Debug|x64
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Debug|x64.Build.0 = Debug|x64
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Release|Win32.ActiveCfg = Release|Win32
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Release|Win32.Build.0 = Release|Win32
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Release|x64.ActiveCfg = Release|x64
+		{92E62D3A-223A-4CC5-87A3-51280E0A3742}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

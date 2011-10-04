@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:aebl="urn:2008:03:aebl-syntax-ns#" xmlns:opticks="urn:2008:03:opticks-aebl-extension-ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="urn:aebl:install-manifest">
+    <aebl:id>astronomical_processing@ballforge.net</aebl:id>
+    <aebl:name>${name}</aebl:name>
+    <aebl:version>${version}</aebl:version>
+    <aebl:type>2</aebl:type>
+    <aebl:description>${description}</aebl:description>
+    <aebl:creator>Yiwei Zhang</aebl:creator>
+    <aebl:licenseURL>aeb:///license/lgpl-2.1.txt</aebl:licenseURL>
+    <aebl:homepageURL>https://github.com/zhangyiwei79/Astronomy-Image-Processing</aebl:homepageURL>
+    <aebl:targetApplication>
+      <rdf:Description>
+        <aebl:id>opticks@ballforge.net</aebl:id>
+        <aebl:minVersion>${opticks_min_version}</aebl:minVersion>
+        <aebl:maxVersion>${opticks_max_version}</aebl:maxVersion>
+      </rdf:Description>
+    </aebl:targetApplication>
+    ${target_platforms}
+  </rdf:Description>
+</rdf:RDF>

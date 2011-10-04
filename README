@@ -47,3 +47,28 @@ Image Registration
 
 
 Test Images can be obtained under directory "images"
+
+Building
+--------
+Grab the dependecies by running Dependencies\retrieve-dependencies.bat
+
+To load the solution file in Visual studio
+   Set the following environment variables:
+      OPTICKSDEPENDENCES=C:\Path\To\Astronomy-Image-Processing\Dependencies
+      OPTICKS_CODE_DIR=C:\Path\to\Opticks-SDK
+      OPTICKS_HOME=C:\Path\to\Opticks-Install    (you may want to copy DefaultSettings and SupportFiles into another directory in the SDK and use this instead)
+   Open the Astronomy.sln in Visual Studio 2010
+   Build the default projects (F7)
+   To prep the workspace for execution, build the AstronomyMgr project.
+   Debug by starting the AstronomyMgr project.
+
+To use the Python build script: (you can use the above environment variables and leave off the -d and --opticks-code-dir arguments)
+   build.py -d C:\Path\To\Astronomy-Image-Processing\Dependencies --opticks-code-dir=C:\Path\to\Opticks-SDK --build-extension --arch=32 --mode=debug
+You can substitute --arch=64 or --mode=release as needed.
+You can prep the build environment for execution if needed by changing --build-extension to --prep
+Finally, you can generate an installer for debug and release 32-bit and 64-bit by building all 4 configurations then running:
+   build.py --build-installer=all
+To generate an installer with fewer configurations, replace "all" with the comma separated list of configurations.
+--build-installer=all is equivalent to --build-installer=win32,win32-debug,win64,win64-debug
+The installer will be in Installer\Astronomy-Vesion.aeb
+The version info and release status are obtained from Code\Include\AstronomyVersion.h
