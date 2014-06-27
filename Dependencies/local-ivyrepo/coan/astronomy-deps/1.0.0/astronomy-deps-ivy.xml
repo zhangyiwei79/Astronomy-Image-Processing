@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0">
+   <info organisation="coan" module="astronomy-deps" revision="1.0.0" status="release" publication="20111004091702">
+      <description>All third-party dependencies for Astronomy Processing</description>
+   </info>
+   <configurations>
+      <conf name="win32"/>
+      <conf name="win32-debug"/>
+      <conf name="win32-debug-pdbs" extends="win32-debug"/>
+      <conf name="win64"/>
+      <conf name="win64-debug"/>
+      <conf name="win64-debug-pdbs" extends="win64-debug"/>
+      <conf name="solaris-sparc64"/>
+      <conf name="linux64"/>
+      <conf name="source"/>
+   </configurations>
+   <publications/>
+   <dependencies defaultconfmapping="*->@">
+      <dependency org="opticks" name="boost" rev="1.0.1"/>
+      <dependency org="opticks" name="qt" rev="1.0.1"/>
+      <dependency org="opticks" name="xerces" rev="1.0.1"/>
+   </dependencies>
+</ivy-module>
